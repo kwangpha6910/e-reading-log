@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ban Bo Sang School e-Reading Log </title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            background: #f8fafc; 
+            color: #1e293b; 
+            /* ปรับฐาน Font ให้ใหญ่ขึ้นเล็กน้อยเพื่อให้สมดุลกับจอใหญ่ */
+            font-size: 16px;
+        }
+        
+        /* ปรับ Input ให้ใหญ่และสมดุลกับทุกอุปกรณ์ */
+        .input-field { 
+            width: 100%; 
+            padding: 14px 18px; /* เพิ่มพื้นที่ */
+            border: 2px solid #e2e8f0; /* เส้นหนาขึ้นเล็กน้อยให้ดู Premium */
+            border-radius: 14px; 
+            outline: none; 
+            transition: all 0.3s; 
+            background: white; 
+            font-size: 1.1rem; /* ใช้ rem เพื่อให้ขยายตาม browser */
+            line-height: 1.6;
+        }
+        .input-field:focus { 
+            border-color: #1e293b; 
+            box-shadow: 0 0 0 4px rgba(30, 41, 59, 0.08); 
+        }
+
+        /* ปรับดาวให้ใหญ่ขึ้นและเว้นระยะดีขึ้น */
+        .star-rating i { 
+            cursor: pointer; 
+            font-size: clamp(32px, 5vw, 42px); /* ปรับขนาดอัตโนมัติตามหน้าจอ */
+            transition: all 0.2s; 
+            margin: 0 6px; 
+        }
+        
+        /* ส่วนของ Capture Area - เน้นให้ตัวใหญ่ชัดเจนเวลาเป็นไฟล์ภาพ */
+        #capture-area { 
+            position: absolute; left: -9999px; top: 0; width: 900px; /* เพิ่มความกว้างพื้นที่แคป */
+            background: #ffffff; padding: 60px; box-sizing: border-box;
+            color: #1e293b;
+        }
+
+        .watermark-overlay {
+            position: absolute; inset: 0; display: grid; 
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr);
+            opacity: 0.03; pointer-events: none; transform: rotate(-25deg);
+            z-index: 1;
+        }
+        .watermark-text { font-size: 45px; font-weight: 800; white-space: nowrap; }
+
+        /* Animation */
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="max-w-5xl mx-auto mt-6 md:mt-10 mb-8 px-4">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white text-xl">
+                    <i class="fa-solid fa-feather-pointed"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-slate-800">Ban Bo Sang School</h1>
+                    <p class="text-[12px] uppercase tracking-[0.2em] text-slate-400 font-bold"> e-Reading Log</p>
+                </div>
+            </div>
+            <div class="flex gap-3 w-full md:w-auto">
+                <a href="showcase.html" target="_blank" class="flex-1 md:flex-none text-center text-slate-600 px-6 py-3 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-all border border-slate-100">คลังผลงาน</a>
+                <button onclick="promptAdmin()" class="flex-1 md:flex-none bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-200 active:scale-95 transition-all">โหมดครูผู้ตรวจ</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+        
+        <div id="login-section" class="max-w-lg mx-auto bg-white p-8 md:p-14 rounded-[2.5rem] shadow-xl border border-slate-50 mt-10">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-extrabold text-slate-800">ข้อมูลนักเรียน</h2>
+                <p class="text-slate-400 text-base mt-3 font-light">กรุณาระบุข้อมูลเพื่อใช้บันทึกประวัติการอ่าน</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-2">ชื่อ</label>
+                        <input type="text" id="login-fname" placeholder="ชื่อ" class="input-field" required>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-2">นามสกุล</label>
+                        <input type="text" id="login-lname" placeholder="นามสกุล" class="input-field" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-2">ระดับชั้น</label>
+                        <select id="login-grade" class="input-field text-slate-700 font-medium" required>
+                            <option value="" disabled selected>เลือกชั้นเรียน</option>
+                            <option value="ประถมศึกษาปีที่ 4">ป.4</option>
+                            <option value="ประถมศึกษาปีที่ 5">ป.5</option>
+                            <option value="ประถมศึกษาปีที่ 6">ป.6</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-2">เลขที่</label>
+                        <input type="number" id="login-number" placeholder="เลขที่" class="input-field" required>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-[0.98] mt-6 text-lg">
+                    เข้าสู่ระบบบันทึกงาน <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </form>
+        </div>
+
+        <div id="main-app-section" style="display: none;" class="animate-fadeIn">
+            <div class="bg-slate-800 text-white p-6 rounded-2xl mb-8 flex justify-between items-center shadow-lg border-b-4 border-slate-700">
+                <div class="flex items-center gap-4">
+                    <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                    <span class="text-lg font-semibold tracking-wide" id="display-user-info"></span>
+                </div>
+                <button onclick="location.reload()" class="text-sm text-slate-400 hover:text-white transition-colors bg-slate-700/50 px-4 py-2 rounded-lg">ออกจากระบบ</button>
+            </div>
+
+            <div class="bg-white p-8 md:p-16 rounded-[3rem] shadow-2xl border border-slate-100">
+                <div class="max-w-4xl mx-auto space-y-12">
+                    <div class="border-b-2 border-slate-50 pb-10">
+                        <label class="text-sm font-black text-slate-400 uppercase tracking-[0.3em] mb-4 block">BOOK TITLE / ชื่อหนังสือ</label>
+                        <input type="text" id="input-title" class="w-full text-4xl md:text-5xl font-bold border-none outline-none placeholder:text-slate-100 text-slate-800" placeholder="พิมพ์ชื่อหนังสือที่นี่...">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                        <div class="group space-y-3">
+                            <label class="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center"><i class="fa-solid fa-user-tag text-xs"></i></span>
+                                ตัวละครหลัก (Who)
+                            </label>
+                            <textarea id="input-who" class="input-field h-40 resize-none" placeholder="ในเรื่องมีใครบ้าง..."></textarea>
+                        </div>
+                        <div class="group space-y-3">
+                            <label class="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center"><i class="fa-solid fa-bolt text-xs"></i></span>
+                                เหตุการณ์ (What)
+                            </label>
+                            <textarea id="input-what" class="input-field h-40 resize-none" placeholder="เกิดอะไรขึ้นบ้าง..."></textarea>
+                        </div>
+                        <div class="group space-y-3">
+                            <label class="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-green-50 text-green-500 flex items-center justify-center"><i class="fa-solid fa-map-location-dot text-xs"></i></span>
+                                สถานที่ (Where)
+                            </label>
+                            <textarea id="input-where" class="input-field h-40 resize-none" placeholder="เหตุการณ์เกิดที่ไหน..."></textarea>
+                        </div>
+                        <div class="group space-y-3">
+                            <label class="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-dots text-xs"></i></span>
+                                บทสรุป (How)
+                            </label>
+                            <textarea id="input-how" class="input-field h-40 resize-none" placeholder="เรื่องราวสรุปอย่างไร..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="pt-6">
+                        <label class="text-sm font-bold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb text-amber-400 text-lg"></i>
+                            บทเรียนหรือข้อคิดที่ได้รับ (Moral Lesson)
+                        </label>
+                        <textarea id="input-moral" class="input-field h-48 resize-none bg-slate-50/30 font-medium text-lg" placeholder="เขียนสิ่งที่นักเรียนได้เรียนรู้จากเรื่องนี้..."></textarea>
+                    </div>
+
+                    <div class="text-center py-12 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-100">
+                        <p class="font-black text-slate-400 mb-6 text-xs uppercase tracking-[0.4em]">การประเมินความพึงพอใจ</p>
+                        <div class="star-rating text-slate-200" id="star-container">
+                            <i class="fa-solid fa-star" onclick="rateStar(1)"></i>
+                            <i class="fa-solid fa-star" onclick="rateStar(2)"></i>
+                            <i class="fa-solid fa-star" onclick="rateStar(3)"></i>
+                            <i class="fa-solid fa-star" onclick="rateStar(4)"></i>
+                            <i class="fa-solid fa-star" onclick="rateStar(5)"></i>
+                        </div>
+                    </div>
+
+                    <button onclick="captureAndSubmit()" class="w-full bg-slate-900 text-white font-black py-6 rounded-2xl shadow-2xl hover:bg-black transition-all text-xl tracking-widest uppercase active:scale-[0.97]">
+                        ส่งบันทึกฉบับสมบูรณ์ <i class="fa-solid fa-cloud-arrow-up ml-3"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="admin-section" style="display: none;">
+            <div class="bg-white p-8 rounded-3xl mb-8 flex flex-col md:flex-row justify-between items-center border border-slate-100 shadow-sm gap-4">
+                <div class="text-center md:text-left">
+                    <h2 class="text-2xl font-black text-slate-800">ระบบตรวจสอบงาน (Teacher)</h2>
+                    <p class="text-slate-400 text-xs uppercase font-bold tracking-[0.2em] mt-1">Pending Approval Works</p>
+                </div>
+                <button onclick="location.reload()" class="bg-slate-100 text-slate-600 px-8 py-3 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">กลับหน้าหลัก</button>
+            </div>
+            <div id="works-gallery" class="grid grid-cols-1 md:grid-cols-2 gap-10"></div>
+        </div>
+    </main>
+
+    <div id="capture-area">
+        <div class="watermark-overlay">
+            <div class="watermark-text">Kru Kwang & Kru Aom</div>
+            <div class="watermark-text">e-Reading Log</div>
+            <div class="watermark-text">Kru Kwang & Kru Aom</div>
+            <div class="watermark-text">e-Reading Log</div>
+            <div class="watermark-text">Kru Kwang & Kru Aom</div>
+            <div class="watermark-text">e-Reading Log</div>
+            <div class="watermark-text">Kru Kwang & Kru Aom</div>
+            <div class="watermark-text">e-Reading Log</div>
+        </div>
+
+        <div style="position: relative; z-index: 10;">
+            <div style="text-align: center; margin-bottom: 50px; border-bottom: 5px solid #1e293b; padding-bottom: 30px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: #94a3b8; letter-spacing: 8px; margin-bottom: 15px; text-transform: uppercase;">
+                    e-Reading Log
+                </h3>
+                <h2 style="font-size: 64px; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -1px;">สมุดบันทึกการอ่านออนไลน์</h2>
+                <div style="width: 80px; height: 6px; background: #fbbf24; margin: 20px auto;"></div>
+            </div>
+
+            <div style="margin-bottom: 40px; background: #f8fafc; padding: 35px; border-radius: 20px; border-left: 10px solid #1e293b;">
+                <label style="color: #64748b; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">ชื่อหนังสือที่อ่าน / BOOK TITLE:</label>
+                <div id="mirror-title" style="font-size: 42px; font-weight: 800; color: #1e293b; margin-top: 10px; line-height: 1.2;"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 35px;">
+                <div style="border: 2px solid #e2e8f0; padding: 25px; border-radius: 20px;">
+                    <div style="color: #1e293b; font-size: 14px; font-weight: 800; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>ตัวละคร (WHO)</span>
+                        <i class="fa-solid fa-users" style="color: #cbd5e1;"></i>
+                    </div>
+                    <div id="mirror-who" style="font-size: 18px; color: #334155; min-height: 60px; line-height: 1.8; font-weight: 500;"></div>
+                </div>
+                <div style="border: 2px solid #e2e8f0; padding: 25px; border-radius: 20px;">
+                    <div style="color: #1e293b; font-size: 14px; font-weight: 800; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>เหตุการณ์ (WHAT)</span>
+                        <i class="fa-solid fa-book-open" style="color: #cbd5e1;"></i>
+                    </div>
+                    <div id="mirror-what" style="font-size: 18px; color: #334155; min-height: 60px; line-height: 1.8; font-weight: 500;"></div>
+                </div>
+                <div style="border: 2px solid #e2e8f0; padding: 25px; border-radius: 20px;">
+                    <div style="color: #1e293b; font-size: 14px; font-weight: 800; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>สถานที่ (WHERE)</span>
+                        <i class="fa-solid fa-location-dot" style="color: #cbd5e1;"></i>
+                    </div>
+                    <div id="mirror-where" style="font-size: 18px; color: #334155; min-height: 60px; line-height: 1.8; font-weight: 500;"></div>
+                </div>
+                <div style="border: 2px solid #e2e8f0; padding: 25px; border-radius: 20px;">
+                    <div style="color: #1e293b; font-size: 14px; font-weight: 800; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>บทสรุป (HOW)</span>
+                        <i class="fa-solid fa-circle-info" style="color: #cbd5e1;"></i>
+                    </div>
+                    <div id="mirror-how" style="font-size: 18px; color: #334155; min-height: 60px; line-height: 1.8; font-weight: 500;"></div>
+                </div>
+            </div>
+
+            <div style="background: #1e293b; padding: 40px; border-radius: 25px; margin-bottom: 40px; color: white; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                <div style="color: #fbbf24; font-size: 14px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 3px;">แง่คิดที่ได้รับจากเรื่องนี้ (Moral Lesson):</div>
+                <div id="mirror-moral" style="font-size: 22px; line-height: 1.8; font-weight: 500;"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 50px; padding-top: 30px; border-top: 2px solid #f1f5f9;">
+                <div>
+                    <p style="font-size: 12px; font-weight: 800; color: #94a3b8; margin-bottom: 8px; letter-spacing: 2px;">RATING:</p>
+                    <div id="mirror-stars" style="color: #fbbf24; font-size: 38px; letter-spacing: 8px;"></div>
+                </div>
+                <div style="text-align: right;">
+                    <p style="font-size: 12px; color: #94a3b8; margin-bottom: 6px; font-weight: 700;">Student Record:</p>
+                    <div id="mirror-student-name" style="color: #1e293b; font-weight: 800; font-size: 20px;"></div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px; color: #cbd5e1; font-size: 12px; font-weight: 500;">
+                © 2026 e-Reading Log BY KRU KWANG & KRU AOM  
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzyeFL8ugxjAo7XCsHesk40retLG_jEQZCFkMqoKvClvOz8sBdrMZPh6KGAT-JP-_g0/exec';
+        let currentRating = 0; 
+
+        async function callAPI(action, data = {}) {
+            try {
+                if (action === 'getPending') {
+                    const res = await fetch(`${WEB_APP_URL}?action=getPending`);
+                    return await res.json();
+                }
+                const res = await fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action, ...data }) });
+                return await res.json();
+            } catch (e) {
+                console.error("API Error", e);
+                return { status: 'error' };
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const fname = document.getElementById('login-fname').value;
+            const lname = document.getElementById('login-lname').value;
+            const grade = document.getElementById('login-grade').value;
+            const num = document.getElementById('login-number').value;
+            
+            const info = `${fname} ${lname} | ${grade} เลขที่ ${num}`;
+            document.getElementById('display-user-info').innerText = info;
+            document.getElementById('mirror-student-name').innerText = info;
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('main-app-section').style.display = 'block';
+            rateStar(0); 
+            window.scrollTo(0,0);
+        }
+
+        function rateStar(r) {
+            currentRating = r;
+            const stars = document.getElementById('star-container').children;
+            for(let i=0; i<5; i++) {
+                stars[i].className = i < r ? 'fa-solid fa-star text-amber-400' : 'fa-solid fa-star text-slate-200';
+            }
+        }
+
+        async function captureAndSubmit() {
+            if(!document.getElementById('input-title').value) return Swal.fire('ข้อมูลไม่สมบูรณ์', 'กรุณาระบุชื่อหนังสือที่อ่านก่อนทำการบันทึก', 'warning');
+            if(currentRating === 0) return Swal.fire('ประเมินความพึงพอใจ', 'กรุณาให้คะแนนการอ่านในครั้งนี้ด้วยครับ', 'info');
+            
+            Swal.fire({ 
+                title: 'กำลังสร้างไฟล์ดิจิทัล', 
+                html: 'ระบบกำลังประมวลผลและสร้างไฟล์ภาพบันทึก...', 
+                allowOutsideClick: false, 
+                didOpen: () => Swal.showLoading() 
+            });
+
+            // Sync data to mirror
+            document.getElementById('mirror-title').innerText = document.getElementById('input-title').value;
+            document.getElementById('mirror-who').innerText = document.getElementById('input-who').value;
+            document.getElementById('mirror-what').innerText = document.getElementById('input-what').value;
+            document.getElementById('mirror-where').innerText = document.getElementById('input-where').value;
+            document.getElementById('mirror-how').innerText = document.getElementById('input-how').value;
+            document.getElementById('mirror-moral').innerText = document.getElementById('input-moral').value;
+            
+            let starsStr = '';
+            for(let i=0; i<5; i++) starsStr += i < currentRating ? '★' : '☆';
+            document.getElementById('mirror-stars').innerText = starsStr;
+
+            const canvas = await html2canvas(document.getElementById('capture-area'), {
+                scale: 2, // เพิ่มความคมชัดเป็น 2 เท่า
+                backgroundColor: "#ffffff",
+                logging: false,
+                useCORS: true
+            });
+
+            const result = await callAPI('addPending', {
+                id: Date.now(),
+                student: document.getElementById('display-user-info').innerText,
+                img: canvas.toDataURL('image/jpeg', 0.8)
+            });
+
+            if(result.status === 'success') {
+                Swal.fire({
+                    title: 'บันทึกสำเร็จ!',
+                    text: 'ข้อมูลถูกส่งเข้าสู่ระบบตรวจสอบเรียบร้อยแล้วครับ',
+                    icon: 'success',
+                    confirmButtonColor: '#1e293b'
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถส่งข้อมูลได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            }
+        }
+
+        async function promptAdmin() {
+            const { value: pass } = await Swal.fire({ 
+                title: 'ยืนยันตัวตนคุณครู', 
+                input: 'password',
+                inputPlaceholder: 'กรอกรหัสผ่านเพื่อเข้าสู่โหมดผู้ตรวจ',
+                confirmButtonColor: '#1e293b'
+            });
+            if(pass === 'Bs2026') {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('main-app-section').style.display = 'none';
+                document.getElementById('admin-section').style.display = 'block';
+                renderPendingWorks();
+            } else if(pass !== undefined) {
+                Swal.fire('รหัสผ่านไม่ถูกต้อง', 'เข้าถึงได้เฉพาะคุณครูเท่านั้นครับ', 'error');
+            }
+        }
+
+        async function renderPendingWorks() {
+            const gal = document.getElementById('works-gallery');
+            gal.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400">กำลังโหลดผลงานดิจิทัล...</div>';
+            const data = await callAPI('getPending');
+            if(!data || data.length === 0) { 
+                gal.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400 font-medium">ยังไม่มีงานที่รอดำเนินการในขณะนี้</div>'; 
+                return; 
+            }
+            
+            gal.innerHTML = data.reverse().map(w => `
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 animate-fadeIn">
+                    <div class="flex items-center gap-3 mb-5 text-slate-800 font-bold border-b-2 border-slate-50 pb-4 text-base">
+                        <i class="fa-solid fa-file-signature text-slate-300"></i> ${w[1]}
+                    </div>
+                    <img src="${w[2]}" class="w-full rounded-2xl border border-slate-100 mb-5 cursor-zoom-in shadow-sm hover:shadow-lg transition-all" onclick="Swal.fire({imageUrl:'${w[2]}', width:'90%', showConfirmButton: false, customClass: {popup: 'rounded-[2rem]'}})">
+                    <div class="space-y-4">
+                        <input type="text" placeholder="✍️ ลงชื่อคุณครูผู้ประเมิน" class="input-field text-sm py-4 teacher-${w[0]} bg-slate-50/50">
+                        <div class="flex gap-3">
+                            <button onclick="finishWork('${w[0]}', '${w[1]}', '${w[2]}')" class="flex-1 bg-slate-900 text-white py-4 rounded-xl font-bold text-base shadow-xl active:scale-95 transition-all">อนุมัติและเผยแพร่</button>
+                            <button onclick="deleteWork('${w[0]}')" class="bg-red-50 text-red-500 px-5 rounded-xl border border-red-100 hover:bg-red-100 transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function finishWork(id, student, img) {
+            const t = document.querySelector(`.teacher-${id}`).value;
+            if(!t) return Swal.fire('ระบุชื่อผู้ตรวจ', 'กรุณาระบุชื่อคุณครูผู้ประเมินก่อนอนุมัติงาน', 'warning');
+            
+            Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
+            const result = await callAPI('publishWork', { id, student, img, teacher: t, status: 'ผ่าน', date: new Date().toLocaleDateString('th-TH') });
+            
+            if(result.status === 'success') {
+                Swal.fire('เรียบร้อย!', 'บันทึกของนักเรียนถูกส่งไปยังคลังผลงานแล้ว', 'success').then(() => renderPendingWorks());
+            }
+        }
+
+        async function deleteWork(id) {
+            const { value: pass } = await Swal.fire({ 
+                title: 'ยืนยันการลบ', 
+                text: 'กรุณาใส่รหัสเพื่อลบข้อมูลงานชิ้นนี้',
+                input: 'password',
+                confirmButtonColor: '#ef4444'
+            });
+            if (pass === '141044' || pass === '110532') {
+                await callAPI('deletePending', { id }); 
+                renderPendingWorks();
+            } else if(pass !== undefined) {
+                Swal.fire('รหัสไม่ถูกต้อง', '', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
